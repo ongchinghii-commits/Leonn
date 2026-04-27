@@ -1,0 +1,201 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and health data",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "age": { "type": "number" },
+        "weight": { "type": "number", "description": "Weight in kg" },
+        "height": { "type": "number", "description": "Height in cm" },
+        "points": { "type": "number", "description": "Loyalty points" },
+        "goal": { "type": "string", "enum": ["weight-loss", "muscle-gain", "injury-prevention", "general-fitness"] }
+      },
+      "required": ["uid", "email"]
+    },
+    "Workout": {
+      "title": "Workout",
+      "description": "Recorded workout session",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "exerciseId": { "type": "string" },
+        "exerciseName": { "type": "string" },
+        "duration": { "type": "number", "description": "Duration in seconds" },
+        "accuracyScore": { "type": "number", "description": "AI-calculated accuracy percentage" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "exerciseId", "timestamp"]
+    },
+    "Meal": {
+      "title": "Meal",
+      "description": "Logged meal for nutritional tracking",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "foodName": { "type": "string" },
+        "calories": { "type": "number" },
+        "protein": { "type": "number" },
+        "carbs": { "type": "number" },
+        "fats": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "foodName", "calories", "timestamp"]
+    },
+    "Reward": {
+      "title": "Reward",
+      "description": "Available reward for points redemption",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "costPoints": { "type": "number" },
+        "voucherCode": { "type": "string" }
+      },
+      "required": ["name", "costPoints"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Physiotherapy or hospital booking",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "centerName": { "type": "string" },
+        "location": { "type": "object", "properties": { "lat": { "type": "number" }, "lng": { "type": "number" } } },
+        "appointmentTime": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "completed", "cancelled"] }
+      },
+      "required": ["userId", "centerName", "appointmentTime", "status"]
+    },
+    "Group": {
+      "title": "Group",
+      "description": "Community group for users to join",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "memberCount": { "type": "number" },
+        "category": { "type": "string" }
+      },
+      "required": ["name", "createdBy", "createdAt"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "Social media post within a group",
+      "type": "object",
+      "properties": {
+        "groupId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "likes": { "type": "number" }
+      },
+      "required": ["groupId", "userId", "content", "createdAt"]
+    },
+    "Invite": {
+      "title": "Invite",
+      "description": "Friend invitation to earn points",
+      "type": "object",
+      "properties": {
+        "inviterId": { "type": "string" },
+        "inviteeEmail": { "type": "string", "format": "email" },
+        "status": { "type": "string", "enum": ["pending", "accepted"] },
+        "pointsAwarded": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["inviterId", "inviteeEmail", "status", "createdAt"]
+    },
+    "Subscription": {
+      "title": "Subscription",
+      "description": "User subscription details",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "plan": { "type": "string", "enum": ["7-days", "1-month", "3-months", "6-months", "1-year"] },
+        "startDate": { "type": "string", "format": "date-time" },
+        "endDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "expired", "cancelled"] }
+      },
+      "required": ["userId", "plan", "startDate", "endDate", "status"]
+    },
+    "LiveStream": {
+      "title": "LiveStream",
+      "description": "Active livestream session",
+      "type": "object",
+      "properties": {
+        "hostId": { "type": "string" },
+        "hostName": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "viewerCount": { "type": "number" },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["hostId", "hostName", "title", "category", "viewerCount", "startedAt", "isActive"]
+    },
+    "LiveChatMessage": {
+      "title": "LiveChatMessage",
+      "description": "Message in a livestream chat",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "content", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "User" },
+      "description": "User profile data"
+    },
+    "/users/{userId}/workouts/{workoutId}": {
+      "schema": { "$ref": "Workout" },
+      "description": "User's workout history"
+    },
+    "/users/{userId}/meals/{mealId}": {
+      "schema": { "$ref": "Meal" },
+      "description": "User's nutritional log"
+    },
+    "/rewards/{rewardId}": {
+      "schema": { "$ref": "Reward" },
+      "description": "Global rewards catalog"
+    },
+    "/users/{userId}/bookings/{bookingId}": {
+      "schema": { "$ref": "Booking" },
+      "description": "User's physiotherapy bookings"
+    },
+    "/groups/{groupId}": {
+      "schema": { "$ref": "Group" },
+      "description": "Community groups"
+    },
+    "/groups/{groupId}/posts/{postId}": {
+      "schema": { "$ref": "Post" },
+      "description": "Posts within a group"
+    },
+    "/invites/{inviteId}": {
+      "schema": { "$ref": "Invite" },
+      "description": "Friend invitations"
+    },
+    "/users/{userId}/subscriptions/{subId}": {
+      "schema": { "$ref": "Subscription" },
+      "description": "User's subscription history"
+    },
+    "/livestreams/{streamId}": {
+      "schema": { "$ref": "LiveStream" },
+      "description": "Active livestreams"
+    },
+    "/livestreams/{streamId}/chat/{messageId}": {
+      "schema": { "$ref": "LiveChatMessage" },
+      "description": "Livestream chat messages"
+    }
+  }
+}

@@ -1,0 +1,262 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: {userId}
+// Fields:
+//   - uid: string (required) - Firebase Auth UID
+//   - displayName: string (optional) - User's name
+//   - email: string (required) - User's email
+//   - age: number (optional) - User's age
+//   - weight: number (optional) - Weight in kg
+//   - height: number (optional) - Height in cm
+//   - points: number (optional) - Loyalty points
+//   - goal: string (optional) - Fitness goal
+//   - role: string (required) - 'admin' or 'user'
+//
+// Collection: users/{userId}/workouts
+// Document ID: {workoutId}
+// Fields:
+//   - userId: string (required) - Owner UID
+//   - exerciseId: string (required) - ID of the exercise
+//   - exerciseName: string (required) - Name of the exercise
+//   - duration: number (required) - Duration in seconds
+//   - accuracyScore: number (required) - AI accuracy score
+//   - timestamp: timestamp (required) - When the workout occurred
+//
+// Collection: users/{userId}/meals
+// Document ID: {mealId}
+// Fields:
+//   - userId: string (required) - Owner UID
+//   - foodName: string (required) - Name of food
+//   - calories: number (required) - Calorie count
+//   - protein: number (optional) - Protein in grams
+//   - carbs: number (optional) - Carbs in grams
+//   - fats: number (optional) - Fats in grams
+//   - timestamp: timestamp (required) - When the meal was logged
+//
+// Collection: rewards
+// Document ID: {rewardId}
+// Fields:
+//   - name: string (required) - Reward name
+//   - description: string (required) - Reward description
+//   - costPoints: number (required) - Points cost
+//   - voucherCode: string (optional) - Code for redemption
+//
+// Collection: users/{userId}/bookings
+// Document ID: {bookingId}
+// Fields:
+//   - userId: string (required) - Owner UID
+//   - centerName: string (required) - Physio center name
+//   - location: map (optional) - {lat: number, lng: number}
+//   - appointmentTime: timestamp (required) - Appointment date/time
+//   - status: string (required) - 'pending', 'confirmed', 'completed', 'cancelled'
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "ongchinghii@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'displayName', 'email', 'age', 'weight', 'height', 'points', 'goal', 'role']) &&
+             data.uid is string && data.uid.size() > 0 &&
+             data.email is string && isValidEmail(data.email) &&
+             (data.role == 'user' || data.role == 'admin');
+    }
+
+    function isValidWorkout(data) {
+      return hasOnlyAllowedFields(['userId', 'exerciseId', 'exerciseName', 'duration', 'accuracyScore', 'timestamp']) &&
+             data.userId == request.auth.uid &&
+             data.exerciseId is string &&
+             data.exerciseName is string &&
+             data.duration is number &&
+             data.accuracyScore is number &&
+             data.timestamp is timestamp;
+    }
+
+    function isValidMeal(data) {
+      return hasOnlyAllowedFields(['userId', 'foodName', 'calories', 'protein', 'carbs', 'fats', 'timestamp']) &&
+             data.userId == request.auth.uid &&
+             data.foodName is string &&
+             data.calories is number &&
+             data.timestamp is timestamp;
+    }
+
+    function isValidBooking(data) {
+      return hasOnlyAllowedFields(['userId', 'centerName', 'location', 'appointmentTime', 'status']) &&
+             data.userId == request.auth.uid &&
+             data.centerName is string &&
+             data.appointmentTime is timestamp &&
+             data.status in ['pending', 'confirmed', 'completed', 'cancelled'];
+    }
+
+    function isValidGroup(data) {
+      return data.name is string && data.name.size() > 0 &&
+             data.createdBy == request.auth.uid;
+    }
+
+    function isValidPost(data) {
+      return hasOnlyAllowedFields(['groupId', 'userId', 'userName', 'content', 'createdAt', 'likes']) &&
+             data.groupId is string &&
+             data.userId == request.auth.uid &&
+             data.content is string && data.content.size() > 0 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidInvite(data) {
+      return hasOnlyAllowedFields(['inviterId', 'inviteeEmail', 'status', 'pointsAwarded', 'createdAt']) &&
+             data.inviterId == request.auth.uid &&
+             isValidEmail(data.inviteeEmail) &&
+             data.status in ['pending', 'accepted'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidSubscription(data) {
+      return hasOnlyAllowedFields(['userId', 'plan', 'startDate', 'endDate', 'status']) &&
+             data.userId == request.auth.uid &&
+             data.plan in ['7-days', '1-month', '3-months', '6-months', '1-year'] &&
+             data.startDate is timestamp &&
+             data.endDate is timestamp &&
+             data.status in ['active', 'expired', 'cancelled'];
+    }
+
+    function isValidLiveStream(data) {
+      return hasOnlyAllowedFields(['hostId', 'hostName', 'title', 'category', 'viewerCount', 'startedAt', 'isActive']) &&
+             data.hostId == request.auth.uid &&
+             data.hostName is string &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 100 &&
+             data.category is string &&
+             data.viewerCount is number &&
+             data.startedAt is timestamp &&
+             data.isActive is bool;
+    }
+
+    function isValidLiveChatMessage(data) {
+      return hasOnlyAllowedFields(['userId', 'userName', 'content', 'timestamp']) &&
+             data.userId == request.auth.uid &&
+             data.userName is string &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 500 &&
+             data.timestamp is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated(); // Allow reading other users for social features (limited fields)
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    ((isOwner(userId) && request.resource.data.role == 'user') || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    ((isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin());
+    }
+
+    match /users/{userId}/workouts/{workoutId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidWorkout(request.resource.data);
+      allow update: if isOwner(userId) && isValidWorkout(request.resource.data);
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    match /users/{userId}/meals/{mealId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidMeal(request.resource.data);
+      allow update: if isOwner(userId) && isValidMeal(request.resource.data);
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    match /users/{userId}/bookings/{bookingId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidBooking(request.resource.data);
+      allow update: if isOwner(userId) && isValidBooking(request.resource.data);
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    match /users/{userId}/subscriptions/{subId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidSubscription(request.resource.data);
+      allow update: if isOwner(userId) && isValidSubscription(request.resource.data);
+    }
+
+    match /groups/{groupId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidGroup(request.resource.data);
+      allow update: if isAuthenticated(); // Simplified for now
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.createdBy == request.auth.uid);
+    }
+
+    match /groups/{groupId}/posts/{postId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidPost(request.resource.data);
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /invites/{inviteId} {
+      allow read: if isAuthenticated() && (resource.data.inviterId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidInvite(request.resource.data);
+      allow update: if isAdmin(); // Only admin can process invites for points
+    }
+
+    match /rewards/{rewardId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /livestreams/{streamId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidLiveStream(request.resource.data);
+      allow update: if isAuthenticated() && (
+        (resource.data.hostId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewerCount', 'isActive', 'title', 'category'])) ||
+        isAdmin() ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewerCount'])) // Allow viewers to increment count (simplified)
+      );
+      
+      match /chat/{messageId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && isValidLiveChatMessage(request.resource.data);
+      }
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

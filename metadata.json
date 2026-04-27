@@ -1,0 +1,7 @@
+{
+  "name": "FitForm",
+  "description": "A comprehensive health and fitness app featuring AI-powered biomechanical analysis, nutritional management, and physiotherapy integration.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
